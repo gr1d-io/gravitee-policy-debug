@@ -1,0 +1,30 @@
+{
+  "type" : "object",
+  "id" : "urn:jsonschema:io:gravitee:policy:debug:configuration:DebugPolicyConfiguration",
+  "properties" : {
+    "logRequestHeaders" : {
+      "title": "Log Request Headers",
+      "type" : "boolean"
+    },
+    "logRequestBody" : {
+      "title": "Log Request Body",
+      "type" : "boolean"
+    },
+    "logRequestContextAttributes" : {
+      "title": "Log Request Body",
+      "type" : "boolean"
+    },
+    "logResponseHeaders" : {
+      "title": "Log Request Body",
+      "type" : "boolean"
+    },
+    "logResponseBody" : {
+      "title": "Log Request Body",
+      "type" : "boolean"
+    },
+    "logResponseContextAttributes" : {
+      "title": "Log Request Body",
+      "type" : "boolean"
+    }
+  }
+}
