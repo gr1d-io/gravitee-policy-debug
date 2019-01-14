@@ -136,8 +136,11 @@ public class DebugPolicy {
 
                 @Override
                 public void end() {
-                    String body = buffer.toString();
-                    instance.logConsole("onRequestContent", "{\n\t\"body\": \""+body+"\"\n}");
+                    if (buffer != null)
+                    {
+                        String body = buffer.toString();
+                        instance.logConsole("onRequestContent", "{\n\t\"body\": \""+body+"\"\n}");
+                    }
                     super.end();
                 }
             };
@@ -165,8 +168,11 @@ public class DebugPolicy {
 
                 @Override
                 public void end() {
-                    String body = buffer.toString();
-                    instance.logConsole("onRequestContent", "{\n\t\"body\": \""+body+"\"\n}");
+                    if (buffer != null)
+                    {
+                        String body = buffer.toString();
+                        instance.logConsole("onResponseContent", "{\n\t\"body\": \""+body+"\"\n}");
+                    }
                     super.end();
                 }
             };
