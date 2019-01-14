@@ -86,8 +86,8 @@ public class DebugPolicy {
         if (data.size() > 0)
         {
             String message = this.getLogMessage(data);
-            this.log("onRequest", message);
-            request.metrics().setMessage(request.metrics().getMessage() + "\n\n->onRequest: " + message);
+            this.logConsole("onRequest", message);
+            this.logMetrics("onRequest", message, request);
         }
 
         policyChain.doNext(request,response);
@@ -111,10 +111,10 @@ public class DebugPolicy {
         if (data.size() > 0)
         {
             String message = this.getLogMessage(data);
-            this.log("onResponse", message);
-            // request.metrics().setMessage(request.metrics().getMessage() + "\n\n->onResponse: " + message);
+            this.logConsole("onResponse", message);
+            this.logMetrics("onResponse", message, request);
         }
-
+    
         policyChain.doNext(request,response);
     }
 
@@ -221,8 +221,18 @@ public class DebugPolicy {
         return String.join(delimeter, entryValues);
     } 
 
-    private void log(String type, String message)
+    private void logConsole(String type, String message)
     {
         LOGGER.warn("[DEBUG] Debug info for \"" + type + "\": " + message);
+    }
+
+    private void logMetrics(String type, String message, Request request)
+    {
+        String actualMessage = request.metrics().getMessage();
+        if (actualMessage == null)
+        {
+            actualMessage = "";
+        }
+        request.metrics().setMessage(actualMessage + "\n\n->onRequest: " + message);
     }
 }
