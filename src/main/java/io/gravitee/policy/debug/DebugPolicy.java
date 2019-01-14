@@ -96,8 +96,8 @@ public class DebugPolicy {
         policyChain.doNext(request,response);
     }
 
-    @OnRequestContent
-    public ReadWriteStream onRequestContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
+    // @OnRequestContent
+    // public ReadWriteStream onRequestContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
 //        LOGGER.debug("Execute json schema validation policy on request {}", request.id());
 //
 //        return new BufferedReadWriteStream() {
@@ -136,7 +136,7 @@ public class DebugPolicy {
 //                }
 //            }
 //        };
-    }
+    // }
 
     private String logContext(ExecutionContext executionContext)
     {
