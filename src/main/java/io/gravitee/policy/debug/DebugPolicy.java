@@ -112,53 +112,69 @@ public class DebugPolicy {
         {
             String message = this.getLogMessage(data);
             this.logConsole("onResponse", message);
-            this.logMetrics("onResponse", message, request);
         }
     
         policyChain.doNext(request,response);
     }
 
-    // @OnRequestContent
-    // public ReadWriteStream onRequestContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-//        LOGGER.debug("Execute json schema validation policy on request {}", request.id());
-//
-//        return new BufferedReadWriteStream() {
-//            Buffer buffer = Buffer.buffer();
-//
-//            @Override
-//            public SimpleReadWriteStream<Buffer> write(Buffer content) {
-//                buffer.appendBuffer(content);
-//                return this;
-//            }
-//
-//            @Override
-//            public void end() {
-//                try {
-//                    JsonNode schema = JsonLoader.fromString(debugPolicyConfiguration.getSchema());
-//                    JsonNode content = JsonLoader.fromString(buffer.toString());
-//
-//                    ProcessingReport report;
-//
-//                    if (configuration.isValidateUnchecked()) {
-//                        report = validator.validateUnchecked(schema, content, configuration.isDeepCheck());
-//                    } else {
-//                        report = validator.validate(schema, content, configuration.isDeepCheck());
-//                    }
-//
-//                    if (!report.isSuccess()) {
-//                        request.metrics().setMessage(report.toString());
-//                        sendBadRequestResponse(executionContext, policyChain);
-//                    } else {
-//                        super.write(buffer);
-//                        super.end();
-//                    }
-//                } catch (Exception ex) {
-//                    request.metrics().setMessage(ex.getMessage());
-//                    sendBadRequestResponse(executionContext, policyChain);
-//                }
-//            }
-//        };
-    // }
+    @OnRequestContent
+    public ReadWriteStream onRequestContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
+        DebugPolicy instance = this;
+        if (this.debugPolicyConfiguration.isLogRequestBody()) {
+            return new BufferedReadWriteStream() {
+                private Buffer buffer;
+
+                @Override
+                public SimpleReadWriteStream<Buffer> write(Buffer content) {
+                    if (buffer == null) {
+                        buffer = Buffer.buffer();
+                    }
+
+                    buffer.appendBuffer(content);
+                    return this;
+                }
+
+                @Override
+                public void end() {
+                    String body = buffer.toString();
+                    instance.logConsole("onRequestContent", "{\n\t\"body\": \""+body+"\"\n}");
+                    super.end();
+                }
+            };
+        }
+        
+        return null;
+    }
+
+    @OnRequestContent
+    public ReadWriteStream onResponseContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
+        DebugPolicy instance = this;
+        if (this.debugPolicyConfiguration.isLogRequestBody()) {
+            return new BufferedReadWriteStream() {
+                private Buffer buffer;
+
+                @Override
+                public SimpleReadWriteStream<Buffer> write(Buffer content) {
+                    if (buffer == null) {
+                        buffer = Buffer.buffer();
+                    }
+
+                    buffer.appendBuffer(content);
+                    return this;
+                }
+
+                @Override
+                public void end() {
+                    String body = buffer.toString();
+                    instance.logConsole("onRequestContent", "{\n\t\"body\": \""+body+"\"\n}");
+                    super.end();
+                }
+            };
+        }
+
+        // Nothing to apply, return null. This policy will not be added to the stream chain.
+        return null;
+    }
 
     private List<Map.Entry<String,String>> processContext(ExecutionContext executionContext)
     {
