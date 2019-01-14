@@ -11,19 +11,19 @@
       "type" : "boolean"
     },
     "logRequestContextAttributes" : {
-      "title": "Log Request Body",
+      "title": "Log Request Context",
       "type" : "boolean"
     },
     "logResponseHeaders" : {
-      "title": "Log Request Body",
+      "title": "Log Response Headers",
       "type" : "boolean"
     },
     "logResponseBody" : {
-      "title": "Log Request Body",
+      "title": "Log Response Body",
       "type" : "boolean"
     },
     "logResponseContextAttributes" : {
-      "title": "Log Request Body",
+      "title": "Log Response Context",
       "type" : "boolean"
     }
   }
