@@ -44,9 +44,12 @@ import org.springframework.core.env.Environment;
 
 import java.util.*;
 import java.util.jar.JarException;
+import java.util.stream.Collectors;
 
 import org.json.JSONObject;
+import org.mozilla.javascript.tools.debugger.treetable.AbstractCellEditor;
 import org.json.JSONException;
+
 
 /**
  * @author Alexandre (tolstenko at gr1d.io)
@@ -56,13 +59,6 @@ import org.json.JSONException;
 public class DebugPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DebugPolicy.class);
-
-    static final String ATTR_AUTHORIZATION_KEY = "Authorization";
-    static final String KEYCHAIN_STRING = "keychain";
-    static final String USER_STRING = "user";
-    static final String PASS_STRING = "pass";
-    static final String METHOD_STRING = "method";
-    static final String BASICAUTH = "basicauth";
 
     /**
      * Policy configuration
@@ -75,11 +71,24 @@ public class DebugPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-        if(debugPolicyConfiguration.isLogRequestContextAttributes())
-            request.metrics().setMessage(request.metrics().getMessage() + " " + logContext(executionContext));
+        Map<String, List<Map.Entry<String,String>>> data = new HashMap<String, List<Map.Entry<String,String>>>();
 
-        if(debugPolicyConfiguration.isLogRequestHeaders())
-            request.metrics().setMessage(request.metrics().getMessage() + " " + logHeaders(request.headers()));
+        if(this.debugPolicyConfiguration.isLogRequestContextAttributes())
+        {
+            data.put("Context", this.processContext(executionContext));
+        }
+
+        if(this.debugPolicyConfiguration.isLogRequestHeaders())
+        {
+            data.put("Headers", this.processHeaders(request.headers()));
+        }
+
+        if (data.size() > 0)
+        {
+            String message = this.getLogMessage(data);
+            this.log("onRequest", message);
+            request.metrics().setMessage(request.metrics().getMessage() + "\n\n->onRequest: " + message);
+        }
 
         policyChain.doNext(request,response);
     }
@@ -87,11 +96,24 @@ public class DebugPolicy {
 
     @OnResponse
     public void onResponse(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-        if(debugPolicyConfiguration.isLogResponseContextAttributes())
-            logContext(executionContext);
+        Map<String, List<Map.Entry<String,String>>> data = new HashMap<String, List<Map.Entry<String,String>>>();
 
-        if(debugPolicyConfiguration.isLogResponseHeaders())
-            logHeaders(response.headers());
+        if(this.debugPolicyConfiguration.isLogRequestContextAttributes())
+        {
+            data.put("Context", this.processContext(executionContext));
+        }
+
+        if(this.debugPolicyConfiguration.isLogRequestHeaders())
+        {
+            data.put("Headers", this.processHeaders(response.headers()));
+        }
+
+        if (data.size() > 0)
+        {
+            String message = this.getLogMessage(data);
+            this.log("onResponse", message);
+            // request.metrics().setMessage(request.metrics().getMessage() + "\n\n->onResponse: " + message);
+        }
 
         policyChain.doNext(request,response);
     }
@@ -138,41 +160,69 @@ public class DebugPolicy {
 //        };
     // }
 
-    private String logContext(ExecutionContext executionContext)
+    private List<Map.Entry<String,String>> processContext(ExecutionContext executionContext)
     {
-        StringBuilder attributes= new StringBuilder("{'Attributes':{");
+        List<Map.Entry<String,String>> result = new ArrayList<Map.Entry<String,String>>();
+
         for (Enumeration<String> enumeration = executionContext.getAttributeNames(); enumeration.hasMoreElements(); )
         {
             String key = enumeration.nextElement();
             Object value = executionContext.getAttribute(key);
-            String entry = String.format("'%s': '%s'",key,value.toString());
-            attributes.append(entry);
-            if(enumeration.hasMoreElements())
-                attributes.append(", ");
+            result.add(new AbstractMap.SimpleEntry(key,value));
         }
-        attributes.append("}}");
-
-        String result = attributes.toString();
-        LOGGER.warn(result);
+        
         return result;
     }
 
-    private String logHeaders(HttpHeaders headers)
+    private List<Map.Entry<String,String>> processHeaders(HttpHeaders headers)
     {
-        StringBuilder headersBuilder = new StringBuilder("{'Headers':{");
+        List<Map.Entry<String,String>> result = new ArrayList<Map.Entry<String,String>>();
 
         for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
             for(String innervalue:entry.getValue()) {
-                String element = String.format("'%s': '%s',",entry.getKey(),innervalue); // TODO: improve this comma
-                headersBuilder.append(element);
+                result.add(new AbstractMap.SimpleEntry(entry.getKey(), innervalue));
             }
         }
-
-        headersBuilder.append("}}");
-
-        String result = headersBuilder.toString();
-        LOGGER.warn(result);
+        
         return result;
     }
 
+
+    private String getLogMessage(Map<String, List<Map.Entry<String,String>>> data)
+    {
+        String message = "{\n\t"
+            + String.join(",", data
+                .entrySet()
+                .stream()
+                .map(entry -> this.getLogMessageForCategory(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList())) 
+            + "\n}";
+
+        return message;
+    }
+
+    private String getLogMessageForCategory(String category, List<Map.Entry<String, String>> entries)
+    {
+        String result = "\n\t\""+category+"\": {\n\t\t"+this.convertEntriesToString(entries, 2)+"\n\t}";
+        return result;
+    }
+
+    private String convertEntriesToString(List<Map.Entry<String, String>> entries, int identationLevel)
+    {
+        String delimeter = ",\n";
+        for(int i=0; i<identationLevel; i++)
+        {
+            delimeter += "\t";
+        }
+        List<String> entryValues = entries
+            .stream()
+            .map(entry -> "\""+entry.getKey()+"\": \""+entry.getValue()+"\"")
+            .collect(Collectors.toList());
+        return String.join(delimeter, entryValues);
+    } 
+
+    private void log(String type, String message)
+    {
+        LOGGER.warn("[DEBUG] Debug info for \"" + type + "\": " + message);
+    }
 }
