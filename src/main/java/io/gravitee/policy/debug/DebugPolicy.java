@@ -98,12 +98,12 @@ public class DebugPolicy {
     public void onResponse(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
         Map<String, List<Map.Entry<String,String>>> data = new HashMap<String, List<Map.Entry<String,String>>>();
 
-        if(this.debugPolicyConfiguration.isLogRequestContextAttributes())
+        if(this.debugPolicyConfiguration.isLogResponseContextAttributes())
         {
             data.put("Context", this.processContext(executionContext));
         }
 
-        if(this.debugPolicyConfiguration.isLogRequestHeaders())
+        if(this.debugPolicyConfiguration.isLogResponseHeaders())
         {
             data.put("Headers", this.processHeaders(response.headers()));
         }
@@ -168,7 +168,7 @@ public class DebugPolicy {
         {
             String key = enumeration.nextElement();
             Object value = executionContext.getAttribute(key);
-            result.add(new AbstractMap.SimpleEntry(key,value));
+            result.add(new AbstractMap.SimpleEntry(key,value.toString()));
         }
         
         return result;
