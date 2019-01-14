@@ -33,6 +33,7 @@ import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.api.annotations.OnRequestContent;
 import io.gravitee.policy.api.annotations.OnResponse;
+import io.gravitee.policy.api.annotations.OnResponseContent;
 import io.gravitee.policy.debug.configuration.DebugPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
@@ -44,9 +45,12 @@ import org.springframework.core.env.Environment;
 
 import java.util.*;
 import java.util.jar.JarException;
+import java.util.stream.Collectors;
 
 import org.json.JSONObject;
+import org.mozilla.javascript.tools.debugger.treetable.AbstractCellEditor;
 import org.json.JSONException;
+
 
 /**
  * @author Alexandre (tolstenko at gr1d.io)
@@ -56,13 +60,6 @@ import org.json.JSONException;
 public class DebugPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DebugPolicy.class);
-
-    static final String ATTR_AUTHORIZATION_KEY = "Authorization";
-    static final String KEYCHAIN_STRING = "keychain";
-    static final String USER_STRING = "user";
-    static final String PASS_STRING = "pass";
-    static final String METHOD_STRING = "method";
-    static final String BASICAUTH = "basicauth";
 
     /**
      * Policy configuration
@@ -75,11 +72,24 @@ public class DebugPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-        if(debugPolicyConfiguration.isLogRequestContextAttributes())
-            request.metrics().setMessage(request.metrics().getMessage() + " " + logContext(executionContext));
+        Map<String, List<Map.Entry<String,String>>> data = new HashMap<String, List<Map.Entry<String,String>>>();
 
-        if(debugPolicyConfiguration.isLogRequestHeaders())
-            request.metrics().setMessage(request.metrics().getMessage() + " " + logHeaders(request.headers()));
+        if(this.debugPolicyConfiguration.isLogRequestContextAttributes())
+        {
+            data.put("Context", this.processContext(executionContext));
+        }
+
+        if(this.debugPolicyConfiguration.isLogRequestHeaders())
+        {
+            data.put("Headers", this.processHeaders(request.headers()));
+        }
+
+        if (data.size() > 0)
+        {
+            String message = this.getLogMessage(data);
+            this.logConsole("onRequest", message);
+            this.logMetrics("onRequest", message, request);
+        }
 
         policyChain.doNext(request,response);
     }
@@ -87,92 +97,167 @@ public class DebugPolicy {
 
     @OnResponse
     public void onResponse(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-        if(debugPolicyConfiguration.isLogResponseContextAttributes())
-            logContext(executionContext);
+        Map<String, List<Map.Entry<String,String>>> data = new HashMap<String, List<Map.Entry<String,String>>>();
 
-        if(debugPolicyConfiguration.isLogResponseHeaders())
-            logHeaders(response.headers());
+        if(this.debugPolicyConfiguration.isLogResponseContextAttributes())
+        {
+            data.put("Context", this.processContext(executionContext));
+        }
 
+        if(this.debugPolicyConfiguration.isLogResponseHeaders())
+        {
+            data.put("Headers", this.processHeaders(response.headers()));
+        }
+
+        if (data.size() > 0)
+        {
+            String message = this.getLogMessage(data);
+            this.logConsole("onResponse", message);
+        }
+    
         policyChain.doNext(request,response);
     }
 
     @OnRequestContent
     public ReadWriteStream onRequestContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-//        LOGGER.debug("Execute json schema validation policy on request {}", request.id());
-//
-//        return new BufferedReadWriteStream() {
-//            Buffer buffer = Buffer.buffer();
-//
-//            @Override
-//            public SimpleReadWriteStream<Buffer> write(Buffer content) {
-//                buffer.appendBuffer(content);
-//                return this;
-//            }
-//
-//            @Override
-//            public void end() {
-//                try {
-//                    JsonNode schema = JsonLoader.fromString(debugPolicyConfiguration.getSchema());
-//                    JsonNode content = JsonLoader.fromString(buffer.toString());
-//
-//                    ProcessingReport report;
-//
-//                    if (configuration.isValidateUnchecked()) {
-//                        report = validator.validateUnchecked(schema, content, configuration.isDeepCheck());
-//                    } else {
-//                        report = validator.validate(schema, content, configuration.isDeepCheck());
-//                    }
-//
-//                    if (!report.isSuccess()) {
-//                        request.metrics().setMessage(report.toString());
-//                        sendBadRequestResponse(executionContext, policyChain);
-//                    } else {
-//                        super.write(buffer);
-//                        super.end();
-//                    }
-//                } catch (Exception ex) {
-//                    request.metrics().setMessage(ex.getMessage());
-//                    sendBadRequestResponse(executionContext, policyChain);
-//                }
-//            }
-//        };
+        DebugPolicy instance = this;
+        if (this.debugPolicyConfiguration.isLogRequestBody()) {
+            return new BufferedReadWriteStream() {
+                private Buffer buffer;
+
+                @Override
+                public SimpleReadWriteStream<Buffer> write(Buffer content) {
+                    if (buffer == null) {
+                        buffer = Buffer.buffer();
+                    }
+
+                    buffer.appendBuffer(content);
+                    return this;
+                }
+
+                @Override
+                public void end() {
+                    if (buffer != null)
+                    {
+                        String body = buffer.toString();
+                        instance.logConsole("onRequestContent", "{\n\t\"body\": \""+body+"\"\n}");
+                        super.write(buffer);
+                    }
+                    super.end();
+                }
+            };
+        }
+        
+        return null;
     }
 
-    private String logContext(ExecutionContext executionContext)
+    @OnResponseContent
+    public ReadWriteStream onResponseContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
+        DebugPolicy instance = this;
+        if (this.debugPolicyConfiguration.isLogResponseBody()) {
+            return new BufferedReadWriteStream() {
+                private Buffer buffer;
+
+                @Override
+                public SimpleReadWriteStream<Buffer> write(Buffer content) {
+                    if (buffer == null) {
+                        buffer = Buffer.buffer();
+                    }
+
+                    buffer.appendBuffer(content);
+                    return this;
+                }
+
+                @Override
+                public void end() {
+                    if (buffer != null)
+                    {
+                        String body = buffer.toString();
+                        instance.logConsole("onResponseContent", "{\n\t\"body\": \""+body+"\"\n}");
+                        super.write(buffer);
+                    }
+                    super.end();
+                }
+            };
+        }
+
+        // Nothing to apply, return null. This policy will not be added to the stream chain.
+        return null;
+    }
+
+    private List<Map.Entry<String,String>> processContext(ExecutionContext executionContext)
     {
-        StringBuilder attributes= new StringBuilder("{'Attributes':{");
+        List<Map.Entry<String,String>> result = new ArrayList<Map.Entry<String,String>>();
+
         for (Enumeration<String> enumeration = executionContext.getAttributeNames(); enumeration.hasMoreElements(); )
         {
             String key = enumeration.nextElement();
             Object value = executionContext.getAttribute(key);
-            String entry = String.format("'%s': '%s'",key,value.toString());
-            attributes.append(entry);
-            if(enumeration.hasMoreElements())
-                attributes.append(", ");
+            result.add(new AbstractMap.SimpleEntry(key,value.toString()));
         }
-        attributes.append("}}");
-
-        String result = attributes.toString();
-        LOGGER.warn(result);
+        
         return result;
     }
 
-    private String logHeaders(HttpHeaders headers)
+    private List<Map.Entry<String,String>> processHeaders(HttpHeaders headers)
     {
-        StringBuilder headersBuilder = new StringBuilder("{'Headers':{");
+        List<Map.Entry<String,String>> result = new ArrayList<Map.Entry<String,String>>();
 
         for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
             for(String innervalue:entry.getValue()) {
-                String element = String.format("'%s': '%s',",entry.getKey(),innervalue); // TODO: improve this comma
-                headersBuilder.append(element);
+                result.add(new AbstractMap.SimpleEntry(entry.getKey(), innervalue));
             }
         }
-
-        headersBuilder.append("}}");
-
-        String result = headersBuilder.toString();
-        LOGGER.warn(result);
+        
         return result;
     }
 
+
+    private String getLogMessage(Map<String, List<Map.Entry<String,String>>> data)
+    {
+        String message = "{\n\t"
+            + String.join(",", data
+                .entrySet()
+                .stream()
+                .map(entry -> this.getLogMessageForCategory(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList())) 
+            + "\n}";
+
+        return message;
+    }
+
+    private String getLogMessageForCategory(String category, List<Map.Entry<String, String>> entries)
+    {
+        String result = "\n\t\""+category+"\": {\n\t\t"+this.convertEntriesToString(entries, 2)+"\n\t}";
+        return result;
+    }
+
+    private String convertEntriesToString(List<Map.Entry<String, String>> entries, int identationLevel)
+    {
+        String delimeter = ",\n";
+        for(int i=0; i<identationLevel; i++)
+        {
+            delimeter += "\t";
+        }
+        List<String> entryValues = entries
+            .stream()
+            .map(entry -> "\""+entry.getKey()+"\": \""+entry.getValue()+"\"")
+            .collect(Collectors.toList());
+        return String.join(delimeter, entryValues);
+    } 
+
+    private void logConsole(String type, String message)
+    {
+        LOGGER.warn("[DEBUG] Debug info for \"" + type + "\": " + message);
+    }
+
+    private void logMetrics(String type, String message, Request request)
+    {
+        String actualMessage = request.metrics().getMessage();
+        if (actualMessage == null)
+        {
+            actualMessage = "";
+        }
+        request.metrics().setMessage(actualMessage + "\n\n->onRequest: " + message);
+    }
 }

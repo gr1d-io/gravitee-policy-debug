@@ -23,3 +23,23 @@
 hs_err_pid*
 
 \.idea/
+
+\.classpath
+
+\.project
+
+\.settings/org\.eclipse\.core\.resources\.prefs
+
+\.settings/org\.eclipse\.jdt\.apt\.core\.prefs
+
+\.settings/org\.eclipse\.jdt\.core\.prefs
+
+\.settings/org\.eclipse\.m2e\.core\.prefs
+
+\.vscode/settings\.json
+
+target/classes/plugin\.properties
+
+target/classes/schemas/schema-form\.json
+
+target/maven-archiver/pom\.properties
