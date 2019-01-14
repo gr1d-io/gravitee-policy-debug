@@ -141,6 +141,7 @@ public class DebugPolicy {
                     {
                         String body = buffer.toString();
                         instance.logConsole("onRequestContent", "{\n\t\"body\": \""+body+"\"\n}");
+                        super.write(Buffer.buffer(body));
                     }
                     super.end();
                 }
@@ -173,6 +174,7 @@ public class DebugPolicy {
                     {
                         String body = buffer.toString();
                         instance.logConsole("onResponseContent", "{\n\t\"body\": \""+body+"\"\n}");
+                        super.write(Buffer.buffer(body));
                     }
                     super.end();
                 }
