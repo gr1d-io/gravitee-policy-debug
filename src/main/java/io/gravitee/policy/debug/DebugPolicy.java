@@ -33,6 +33,7 @@ import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.api.annotations.OnRequestContent;
 import io.gravitee.policy.api.annotations.OnResponse;
+import io.gravitee.policy.api.annotations.OnResponseContent;
 import io.gravitee.policy.debug.configuration.DebugPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
@@ -149,10 +150,10 @@ public class DebugPolicy {
         return null;
     }
 
-    @OnRequestContent
+    @OnResponseContent
     public ReadWriteStream onResponseContent(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
         DebugPolicy instance = this;
-        if (this.debugPolicyConfiguration.isLogRequestBody()) {
+        if (this.debugPolicyConfiguration.isLogResponseBody()) {
             return new BufferedReadWriteStream() {
                 private Buffer buffer;
 
