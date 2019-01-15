@@ -258,6 +258,6 @@ public class DebugPolicy {
         {
             actualMessage = "";
         }
-        request.metrics().setMessage(actualMessage + "\n\n->onRequest: " + message);
+        // request.metrics().setMessage(actualMessage + "\n\n->onRequest: " + message);
     }
 }
