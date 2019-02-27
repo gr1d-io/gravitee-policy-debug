@@ -2,6 +2,15 @@
   "type" : "object",
   "id" : "urn:jsonschema:io:gravitee:policy:debug:configuration:DebugPolicyConfiguration",
   "properties" : {
+    "debugPrefix": {
+      "title": "Prefix - identifier on debug messages",
+      "type": "string"
+    },
+    "logLevel": {
+      "title": "Log Level",
+      "type": "string",
+      "enum": ["DEBUG", "ERROR", "INFO", "TRACE", "WARN"]
+    },
     "logRequestHeaders" : {
       "title": "Log Request Headers",
       "type" : "boolean"

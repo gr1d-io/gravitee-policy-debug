@@ -16,18 +16,36 @@
 package io.gravitee.policy.debug.configuration;
 
 import io.gravitee.policy.api.PolicyConfiguration;
-
+import org.slf4j.event.Level;
 /**
  * @author Alexandre (tolstenko at gr1d.io)
  * @author GR1D Team
  */
 public class DebugPolicyConfiguration implements PolicyConfiguration {
+    private String debugPrefix="";
+    private Level logLevel=Level.INFO;
     private boolean logRequestHeaders=false;
     private boolean logRequestBody=false;
     private boolean logRequestContextAttributes=false;
     private boolean logResponseHeaders=false;
     private boolean logResponseBody=false;
     private boolean logResponseContextAttributes=false;
+
+    public String getDebugPrefix() {
+        return this.debugPrefix;
+    }
+
+    public void setDebugPrefix(String debugPrefix) {
+        this.debugPrefix = debugPrefix;
+    }
+
+    public Level getLogLevel() {
+        return this.logLevel;
+    }
+
+    public void setLogLevel(Level logLevel) {
+        this.logLevel = logLevel;
+    }
 
     public boolean isLogRequestHeaders() {
         return logRequestHeaders;

@@ -29,6 +29,7 @@ import io.gravitee.gateway.api.stream.BufferedReadWriteStream;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
 import io.gravitee.gateway.api.stream.SimpleReadWriteStream;
 import io.gravitee.policy.api.PolicyChain;
+import io.gravitee.policy.api.PolicyConfiguration;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.api.annotations.OnRequestContent;
@@ -66,8 +67,8 @@ public class DebugPolicy {
      */
     private final DebugPolicyConfiguration debugPolicyConfiguration;
 
-    public DebugPolicy(DebugPolicyConfiguration debugPolicyConfiguration) {
-        this.debugPolicyConfiguration = debugPolicyConfiguration;
+    public DebugPolicy(PolicyConfiguration debugPolicyConfiguration) {
+        this.debugPolicyConfiguration = (DebugPolicyConfiguration)debugPolicyConfiguration;
     }
 
     @OnRequest
@@ -248,7 +249,37 @@ public class DebugPolicy {
 
     private void logConsole(String type, String message)
     {
-        LOGGER.warn("[DEBUG] Debug info for \"" + type + "\": " + message);
+        String messagePrefix = "[DEBUG]";
+        if (this.debugPolicyConfiguration.getDebugPrefix() != null)
+        {
+            if (this.debugPolicyConfiguration.getDebugPrefix().trim() != "")
+            {
+                messagePrefix = "[DEBUG - "+this.debugPolicyConfiguration.getDebugPrefix()+"]";
+            }
+        }
+        String msg = messagePrefix + " Debug info for \"" + type + "\": " + message;
+        switch(this.debugPolicyConfiguration.getLogLevel())
+        {
+            case DEBUG:
+                LOGGER.debug(msg);
+                break;
+            case ERROR:
+                LOGGER.error(msg);
+                break;
+            case INFO:
+                LOGGER.info(msg);
+                break;
+            case TRACE:
+                LOGGER.trace(msg);
+                break;
+            case WARN:
+                LOGGER.warn(msg);
+                break;
+            default:
+                LOGGER.info(msg);
+                break;
+        }
+        
     }
 
     private void logMetrics(String type, String message, Request request)
